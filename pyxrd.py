@@ -23,10 +23,17 @@ class FindXRD(object):
 
         return csv_files
 
-    def csv_to_df(self):
+    def choose_files(self, file_numbers):
 
-        csv_files = self.find_all_csv()
-        skip_row, anode, step_size = self.find_start_row()
+        file_chosen = []
+        for num in file_numbers:
+            file_chosen.append(self.find_all_csv()[int(num)])
+
+        return file_chosen
+
+    def csv_to_df(self, csv_files):
+
+        skip_row, anode, step_size = self.find_start_row(csv_files)
 
         df1 = pd.read_csv(csv_files[0], skiprows=skip_row)
 
@@ -47,8 +54,8 @@ class FindXRD(object):
 
         return df
 
-    def find_start_row(self):
-        csv_file = self.find_all_csv()[0]
+    def find_start_row(self, csv_files):
+        csv_file = csv_files[0]
         csv_file = open(csv_file, "r")
         reader = csv.reader(csv_file)
         skip_row, anode, step_size = 0, "cu", 0.02
@@ -133,9 +140,47 @@ class FindXRD(object):
         if save_fig:
             plt.savefig(save_fig+".png")
 
+    def plot_offset(self, csv_files):
+        df = self.csv_to_df(csv_files)
+        num = int(df.columns.shape[0] / 2)
+        df = self.find_proper_lim(df, self.theta_lim)
+
+        plt.figure(figsize=(10, 8))
+
+        y_max = 0
+        for i in range(num):
+
+            theta = df.iloc[:, 2 * i]
+            intensity = df.iloc[:, 2 * i + 1]
+
+            plt.plot(theta, intensity+y_max, "r")
+
+            y_max += np.max(intensity)
+            print(y_max)
+
+
+        plt.yticks([])
+        plt.xlim(self.theta_lim)
+        #plt.ylim([np.max(intensity)*(-0.5), np.max(intensity)*1.2])
+
+        plt.ylabel("Intensity(a.u.)")
+        plt.xlabel(r"2$\theta$")
+        plt.show()
 
 if __name__ == "__main__":
     xrd = FindXRD("2018.11.2hayao/cu")
-    #xrd.plot_subplot_xrd()
-    xrd.plot_onebyone()
+    xrd_files = xrd.find_all_csv()
+    print("-----------")
+    for i, xrd_file in enumerate(xrd_files):
+        #print("Choose data in {} graph in: ".format(i))
+        print("number: {}-----filename: {}".format(i, xrd_file))
+    flag = input("Choose and enter: ")
+    if flag:
+        flag = [int(f) for f in flag.split()]
+        csv_files = xrd.choose_files(flag)
+    else:
+        csv_files = xrd.find_all_csv()
+
+    xrd.plot_offset(csv_files)
+    #xrd.plot_onebyone()
 
